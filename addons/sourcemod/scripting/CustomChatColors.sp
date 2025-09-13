@@ -2811,7 +2811,7 @@ public Action Command_Say(int client, const char[] command, int argc)
 				}
 			}
 
-			strcopy(g_sReceivedChatInput[client], sizeof(g_sReceivedChatInput[]), text[1]);
+			strcopy(g_sReceivedChatInput[client], sizeof(g_sReceivedChatInput[client]), text[1]);
 
 			if (strcmp(g_sInputType[client], "ChangeTag", false) == 0)
 				ChangeSingleTag(client, client, g_sReceivedChatInput[client], false);

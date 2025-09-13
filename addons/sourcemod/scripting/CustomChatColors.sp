@@ -1714,7 +1714,7 @@ bool HasFlag(int client, AdminFlag ADMFLAG)
 	return false;
 }
 
-bool ChangeSingleTag(int client, int iTarget, char sTag[64], bool bAdmin)
+bool ChangeSingleTag(int client, int iTarget, char sTag[32], bool bAdmin)
 {
 	ReplaceString(sTag, sizeof(sTag), "\"", "'");
 	ReplaceString(sTag, sizeof(sTag), "%s", "s");
@@ -1747,6 +1747,12 @@ bool ChangeTag(int client, bool bAdmin)
 	{
 		iTarget = client;
 		GetCmdArg(1, sTag, sizeof(sTag));
+	}
+
+	if (strlen(sTag) > 31)
+	{
+		CPrintToChat(client, "{green}[{red}C{green}C{blue}C{green}]{default} Tag is too long (32 characters max).");
+		return false;
 	}
 
 	return ChangeSingleTag(client, iTarget, sTag, bAdmin);
@@ -1946,7 +1952,7 @@ stock bool SetColor(char Key[64], char HEX[64], int client, bool IgnoreBan=false
 	return true;
 }
 
-stock bool SetTag(char text[64], int client, bool IgnoreBan=false)
+stock bool SetTag(char text[32], int client, bool IgnoreBan=false)
 {
 	if (g_DatabaseState != DatabaseState_Connected)
 		return false;
@@ -2251,6 +2257,12 @@ public Action Command_CCCAddTag(int client, int argc)
 	GetCmdArg(6, sTagColor, sizeof(sTagColor));
 	GetCmdArg(7, sNameColor, sizeof(sNameColor));
 	GetCmdArg(8, sChatColor, sizeof(sChatColor));
+
+	if (strlen(sTag) > 31)
+	{
+		CReplyToCommand(client, "{green}[CCC]{white} Tag is too long (32 characters max).");
+		return Plugin_Handled;
+	}
 
 	if (strlen(sEnable) == 1 && strlen(sName) > 0 &&
 		strlen(sTagColor) <= 6 && strlen(sNameColor) <= 6 && strlen(sChatColor) <= 6)
@@ -2783,6 +2795,15 @@ public Action Command_Say(int client, const char[] command, int argc)
 
 			if (text[strlen(text)-1] == '"')
 				text[strlen(text)-1] = '\0';
+
+			if (strcmp(g_sInputType[client], "ChangeTag", false) == 0 || strcmp(g_sInputType[client], "MenuForceTag", false) == 0)
+			{
+				if (strlen(text[1]) > 31)
+				{
+					CReplyToCommand(client, "{green}[CCC]{white} Tag is too long (32 characters max).");
+					return Plugin_Handled;
+				}
+			}
 
 			strcopy(g_sReceivedChatInput[client], sizeof(g_sReceivedChatInput[]), text[1]);
 
@@ -4203,6 +4224,11 @@ public Action Hook_UserMessage(UserMsg msg_id, Handle bf, const int[] players, i
 		if (strlen(sAuthorTag) > 0)
 			Format(g_msgSender, sizeof(g_msgSender), "{%s%s}%s%s", GetColor(sTagColorKey, sValue, sizeof(sValue)) ? "#" : "", bTagFound ? sTagColorKey : "default", sAuthorTag, g_msgSender);
 
+		if (strlen(g_sClientTag[g_msgAuthor]) > strlen(sAuthorTag) && IsClientInGame(g_msgAuthor))
+		{
+			CPrintToChat(g_msgAuthor, "{green}[{red}C{green}C{blue}C{green}]{default} Your tag is longer than 32 characters and has been truncated for display.");
+		}
+
 		StringMap smTrie = CGetTrie();
 		if (g_msgText[0] == '>' && GetConVarInt(g_cvar_GreenText) > 0 && smTrie.GetString("green", sValue, sizeof(sValue)))
 			Format(g_msgText, sizeof(g_msgText), "{green}%s", g_msgText);
@@ -4645,7 +4671,15 @@ public int Native_SetTag(Handle plugin, int numParams)
 		return 0;
 	}
 
-	GetNativeString(2, g_sClientTag[client], sizeof(g_sClientTag[]));
+	char tempTag[64];
+	GetNativeString(2, tempTag, sizeof(tempTag));
+
+	if (strlen(tempTag) > 31)
+	{
+		tempTag[31] = '\0';
+	}
+
+	strcopy(g_sClientTag[client], sizeof(g_sClientTag[]), tempTag);
 	return 1;
 }
 

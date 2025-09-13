@@ -1720,7 +1720,7 @@ bool HasFlag(int client, AdminFlag ADMFLAG)
 	return false;
 }
 
-bool ChangeSingleTag(int client, int iTarget, char sTag[32], bool bAdmin)
+bool ChangeSingleTag(int client, int iTarget, char sTag[64], bool bAdmin)
 {
 	ReplaceString(sTag, sizeof(sTag), "\"", "'");
 	ReplaceString(sTag, sizeof(sTag), "%s", "s");
@@ -1737,7 +1737,7 @@ bool ChangeTag(int client, bool bAdmin)
 {
 	int iTarget;
 	char sTarget[64];
-	char sTag[32];
+	char sTag[64];
 
 	if (bAdmin)
 	{
@@ -1958,7 +1958,7 @@ stock bool SetColor(char Key[64], char HEX[64], int client, bool IgnoreBan=false
 	return true;
 }
 
-stock bool SetTag(char text[32], int client, bool IgnoreBan=false)
+stock bool SetTag(char text[64], int client, bool IgnoreBan=false)
 {
 	if (g_DatabaseState != DatabaseState_Connected)
 		return false;

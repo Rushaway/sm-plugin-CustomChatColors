@@ -1339,13 +1339,8 @@ stock void OnSQLSelect_TagGroup(Database db, DBResultSet results, const char[] e
 		SQL_FetchString(results, 5, g_sClientChatColor[client], sizeof(g_sClientChatColor[]));
 
 		g_iDefaultClientEnable[client] = g_iClientEnable[client];
-
 		if (strlen(g_sClientTag[client]) > 31)
-		{
-			char originalTag[64];
-			strcopy(originalTag, sizeof(originalTag), g_sClientTag[client]);
-		}
-
+			g_sClientTag[client][31] = '\0';
 		strcopy(g_sDefaultClientTag[client], sizeof(g_sDefaultClientTag[]), g_sClientTag[client]);
 		strcopy(g_sDefaultClientTagColor[client], sizeof(g_sDefaultClientTagColor[]), g_sClientTagColor[client]);
 		strcopy(g_sDefaultClientNameColor[client], sizeof(g_sDefaultClientNameColor[]), g_sClientNameColor[client]);
@@ -1394,13 +1389,8 @@ public void OnSQLSelect_Tag(Database db, DBResultSet results, const char[] err, 
 		SQL_FetchString(results, 5, g_sClientChatColor[client], sizeof(g_sClientChatColor[]));
 
 		g_iDefaultClientEnable[client] = g_iClientEnable[client];
-
 		if (strlen(g_sClientTag[client]) > 31)
-		{
-			char originalTag[64];
-			strcopy(originalTag, sizeof(originalTag), g_sClientTag[client]);
-		}
-
+			g_sClientTag[client][31] = '\0';
 		strcopy(g_sDefaultClientTag[client], sizeof(g_sDefaultClientTag[]), g_sClientTag[client]);
 		strcopy(g_sDefaultClientTagColor[client], sizeof(g_sDefaultClientTagColor[]), g_sClientTagColor[client]);
 		strcopy(g_sDefaultClientNameColor[client], sizeof(g_sDefaultClientNameColor[]), g_sClientNameColor[client]);
@@ -1451,6 +1441,8 @@ public void OnSQLUpdate_Tag(Database db, DBResultSet results, const char[] err, 
 	// Do not reset the client here; it clears SteamID and runtime state.
 	// Instead, snapshot current values as defaults so we don't trigger writes on disconnect.
 	g_iDefaultClientEnable[client] = g_iClientEnable[client];
+	if (strlen(g_sClientTag[client]) > 31)
+		g_sClientTag[client][31] = '\0';
 	strcopy(g_sDefaultClientTag[client], sizeof(g_sDefaultClientTag[]), g_sClientTag[client]);
 	strcopy(g_sDefaultClientTagColor[client], sizeof(g_sDefaultClientTagColor[]), g_sClientTagColor[client]);
 	strcopy(g_sDefaultClientNameColor[client], sizeof(g_sDefaultClientNameColor[]), g_sClientNameColor[client]);

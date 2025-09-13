@@ -82,7 +82,7 @@ ArrayList g_sColorsArray = null;
 
 int g_iClientBanned[MAXPLAYERS + 1] = { -1, ...};
 bool g_bWaitingForChatInput[MAXPLAYERS + 1];
-char g_sReceivedChatInput[MAXPLAYERS + 1][64];
+char g_sReceivedChatInput[MAXPLAYERS + 1][32];
 char g_sInputType[MAXPLAYERS + 1][32];
 char g_sATargetSID[MAXPLAYERS + 1][64];
 int g_iATarget[MAXPLAYERS + 1];

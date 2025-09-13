@@ -82,7 +82,7 @@ ArrayList g_sColorsArray = null;
 
 int g_iClientBanned[MAXPLAYERS + 1] = { -1, ...};
 bool g_bWaitingForChatInput[MAXPLAYERS + 1];
-char g_sReceivedChatInput[MAXPLAYERS + 1][32];
+char g_sReceivedChatInput[MAXPLAYERS + 1][MAX_CHAT_LENGTH];
 char g_sInputType[MAXPLAYERS + 1][32];
 char g_sATargetSID[MAXPLAYERS + 1][64];
 int g_iATarget[MAXPLAYERS + 1];
@@ -1669,8 +1669,8 @@ bool MakeStringPrintable(char[] str, int str_len_max, const char[] empty) //func
 			{
 				modified = true;
 
-			if ((str[r] == '\n' || str[r] == '\t') && w > 0 && str[w-1] != '\x20')
-				addspace = true;
+				if ((str[r] == '\n' || str[r] == '\t') && w > 0 && str[w-1] != '\x20')
+					addspace = true;
 			}
 			else
 			{
@@ -1686,7 +1686,7 @@ bool MakeStringPrintable(char[] str, int str_len_max, const char[] empty) //func
 				str[w++] = str[r];
 			}
 		}
-		while(str[++r]);
+		while (str[++r]);
 	}
 
 	str[w] = '\0';

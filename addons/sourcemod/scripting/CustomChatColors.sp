@@ -67,7 +67,7 @@ char g_sClientSID[MAXPLAYERS + 1][32];
 char g_sSteamIDs[MAXPLAYERS + 1][MAX_AUTHID_LENGTH];
 
 int g_iClientEnable[MAXPLAYERS + 1] = { 1, ...};
-char g_sClientTag[MAXPLAYERS + 1][32];
+char g_sClientTag[MAXPLAYERS + 1][64];
 char g_sClientTagColor[MAXPLAYERS + 1][32];
 char g_sClientNameColor[MAXPLAYERS + 1][32];
 char g_sClientChatColor[MAXPLAYERS + 1][32];
@@ -82,7 +82,7 @@ ArrayList g_sColorsArray = null;
 
 int g_iClientBanned[MAXPLAYERS + 1] = { -1, ...};
 bool g_bWaitingForChatInput[MAXPLAYERS + 1];
-char g_sReceivedChatInput[MAXPLAYERS + 1][MAX_CHAT_LENGTH];
+char g_sReceivedChatInput[MAXPLAYERS + 1][64];
 char g_sInputType[MAXPLAYERS + 1][32];
 char g_sATargetSID[MAXPLAYERS + 1][64];
 int g_iATarget[MAXPLAYERS + 1];
@@ -2811,7 +2811,7 @@ public Action Command_Say(int client, const char[] command, int argc)
 				}
 			}
 
-			strcopy(g_sReceivedChatInput[client], sizeof(g_sReceivedChatInput[client]), text[1]);
+			strcopy(g_sReceivedChatInput[client], sizeof(g_sReceivedChatInput[]), text[1]);
 
 			if (strcmp(g_sInputType[client], "ChangeTag", false) == 0)
 				ChangeSingleTag(client, client, g_sReceivedChatInput[client], false);

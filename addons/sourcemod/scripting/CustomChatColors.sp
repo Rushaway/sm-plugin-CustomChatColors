@@ -67,7 +67,7 @@ char g_sClientSID[MAXPLAYERS + 1][32];
 char g_sSteamIDs[MAXPLAYERS + 1][MAX_AUTHID_LENGTH];
 
 int g_iClientEnable[MAXPLAYERS + 1] = { 1, ...};
-char g_sClientTag[MAXPLAYERS + 1][64];
+char g_sClientTag[MAXPLAYERS + 1][32];
 char g_sClientTagColor[MAXPLAYERS + 1][32];
 char g_sClientNameColor[MAXPLAYERS + 1][32];
 char g_sClientChatColor[MAXPLAYERS + 1][32];
@@ -3343,7 +3343,7 @@ public int MenuHandler_Main(Menu MenuMain, MenuAction action, int param1, int pa
 		}
 		else if (strcmp(Selected, "Current", false) == 0)
 		{
-			char sTagF[64];
+			char sTagF[32];
 			char sTagColorF[64];
 			char sNameColorF[64];
 			char sChatColorF[64];
@@ -4677,7 +4677,7 @@ public int Native_SetTag(Handle plugin, int numParams)
 		return 0;
 	}
 
-	char tempTag[64];
+	char tempTag[32];
 	GetNativeString(2, tempTag, sizeof(tempTag));
 
 	if (strlen(tempTag) > 31)

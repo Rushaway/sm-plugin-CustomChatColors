@@ -110,7 +110,7 @@ char g_msgText[MAX_CHAT_LENGTH];
 char g_msgFinal[255];
 bool g_msgIsTeammate;
 
-bool g_Ignored[(MAXPLAYERS + 1) * (MAXPLAYERS + 1)] = {false, ...};
+bool g_Ignored[MAXPLAYERS + 1][MAXPLAYERS + 1];
 
 int g_bSQLSelectReplaceRetry = 0;
 int g_bSQLInsertReplaceRetry[MAXPLAYERS + 1] = { 0, ... };
@@ -148,6 +148,8 @@ bool g_bDisablePsay[MAXPLAYERS + 1];
 bool g_bDBConnectDelayActive = false;
 bool g_bClientDataLoaded[MAXPLAYERS + 1] = {false, ...};
 
+EngineVersion g_evEngineVersion;
+
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	MarkNativeAsOptional("Updater_AddPlugin");
@@ -164,7 +166,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("CCC_ResetColor", Native_ResetColor);
 	CreateNative("CCC_ResetTag", Native_ResetTag);
 
-	CreateNative("CCC_UpdateIgnoredArray", Native_UpdateIgnoredArray);
+	CreateNative("CCC_SetIgnored", Native_SetIgnored);
 	CreateNative("CCC_IsClientEnabled", Native_IsClientEnabled);
 
 	RegPluginLibrary("ccc");
@@ -266,9 +268,11 @@ public void OnPluginStart()
 
 	ResetReplace();
 	LoadColorArray();
-
+	
 	if (g_bLate)
 		LateLoad();
+		
+	g_evEngineVersion = GetEngineVersion();
 }
 
 public void OnPluginEnd()
@@ -463,24 +467,18 @@ stock void LateLoad()
 
 stock void LoadColorArray()
 {
-	StringMap smTrie = CGetTrie();
-	StringMapSnapshot smTrieSnapshot = smTrie.Snapshot();
-	if (smTrie != null)
+	if (g_sColorsArray != null)
+		delete g_sColorsArray;
+
+	CInitColors();
+	
+	g_sColorsArray = new ArrayList(sizeof(g_sColorKeys));
+
+	for (int i = 0; i < sizeof(g_sColorKeys); i++)
 	{
-		if (g_sColorsArray != null)
-			delete g_sColorsArray;
-
-		g_sColorsArray = new ArrayList(smTrie.Size);
-
-		for (int i = 0; i < smTrie.Size; i++)
-		{
-			char key[64];
-
-			smTrieSnapshot.GetKey(i, key, sizeof(key));
-
-			g_sColorsArray.PushString(key);
-		}
+		g_sColorsArray.PushString(g_sColorKeys[i]);
 	}
+
 	SortColors();
 }
 
@@ -1816,9 +1814,8 @@ bool ChangeSingleColor(int client, int iTarget, char Key[64], char sCol[64], boo
 	}
 	else if ((IsSource2009() && !IsValidHex(sCol)) || !IsSource2009())
 	{
-		StringMap smTrie = CGetTrie();
 		char value[32];
-		if (!smTrie.GetString(sCol, value, sizeof(value)))
+		if (!CGetColor(sCol, value, sizeof(value)))
 		{
 			CPrintToChat(client, "{green}[{red}C{green}C{blue}C{green}]{default} Invalid color name given.");
 			return false;
@@ -3823,22 +3820,23 @@ public void Menu_TagPrefs(int client)
 public void Menu_AddColors(Menu ColorsMenu)
 {
 	char info[64];
-	StringMap smTrie = CGetTrie();
-
-	if (smTrie!= null && g_sColorsArray != null)
+	for (int i = 0; i < g_sColorsArray.Length; i++)
 	{
-		for (int i = 0; i < g_sColorsArray.Length; i++)
+		char key[64];
+		char value[64];
+		g_sColorsArray.GetString(i, key, sizeof(key));
+		
+		if (IsSource2009())
 		{
-			char key[64];
-			char value[64];
-			g_sColorsArray.GetString(i, key, sizeof(key));
-			smTrie.GetString(key, value, sizeof(value));
-			if (IsSource2009() && value[0] == '#')
-				Format(info, sizeof(info), "%s (%s)", key, value);
-			else
-				Format(info, sizeof(info), "%s", key);
-			ColorsMenu.AddItem(key, info);
+			if (!CGetColor(key, value, sizeof(value)) || value[0] != '#')
+				continue;
+			
+			Format(info, sizeof(info), "%s (%s)", key, value);
 		}
+		else
+			Format(info, sizeof(info), "%s", key);
+			
+		ColorsMenu.AddItem(key, info);
 	}
 }
 
@@ -4253,8 +4251,7 @@ public Action Hook_UserMessage(UserMsg msg_id, Handle bf, const int[] players, i
 		if (strlen(sAuthorTag) > 0)
 			Format(g_msgSender, sizeof(g_msgSender), "{%s%s}%s%s", GetColor(sTagColorKey, sValue, sizeof(sValue)) ? "#" : "", bTagFound ? sTagColorKey : "default", sAuthorTag, g_msgSender);
 
-		StringMap smTrie = CGetTrie();
-		if (g_msgText[0] == '>' && GetConVarInt(g_cvar_GreenText) > 0 && smTrie.GetString("green", sValue, sizeof(sValue)))
+		if (g_msgText[0] == '>' && GetConVarInt(g_cvar_GreenText) > 0 && CGetColor("green", sValue, sizeof(sValue)))
 			Format(g_msgText, sizeof(g_msgText), "{green}%s", g_msgText);
 
 		if (bChatFound)
@@ -4274,7 +4271,10 @@ public Action Hook_UserMessage(UserMsg msg_id, Handle bf, const int[] players, i
 	if (!g_msgAuthor || IsClientEnabled())
 	{
 		CFormatColor(g_msgFinal, sizeof(g_msgFinal), g_msgAuthor);
-		CAddWhiteSpace(g_msgFinal, sizeof(g_msgFinal));
+		// Add white space
+		if (!IsSource2009() && !(g_evEngineVersion == Engine_Left4Dead) && !(g_evEngineVersion == Engine_Left4Dead2)) {
+			Format(g_msgFinal, sizeof(g_msgFinal), " %s", g_msgFinal);
+		}
 	}
 
 	return Plugin_Handled;
@@ -4299,7 +4299,7 @@ public Action Event_PlayerSay(Handle event, const char[] name, bool dontBroadcas
 		{
 			if (IsClientInGame(client) && GetClientTeam(client) == team)
 			{
-				if (!g_Ignored[client * (MAXPLAYERS + 1) + g_msgAuthor])
+				if (!g_Ignored[client][g_msgAuthor])
 					players[playersNum++] = client;
 			}
 		}
@@ -4310,7 +4310,7 @@ public Action Event_PlayerSay(Handle event, const char[] name, bool dontBroadcas
 		{
 			if (IsClientInGame(client))
 			{
-				if (!g_Ignored[client * (MAXPLAYERS + 1) + g_msgAuthor])
+				if (!g_Ignored[client][g_msgAuthor])
 					players[playersNum++] = client;
 			}
 		}
@@ -4482,7 +4482,6 @@ stock bool GetColorKey(int client, CCC_ColorType colorType, char[] key, int size
 	if (!skipChecks && (!client || client > MaxClients || !IsClientInGame(client)))
 		return false;
 
-	StringMap smTrie = CGetTrie();
 	bool bFound = true;
 	char value[32];
 
@@ -4500,7 +4499,7 @@ stock bool GetColorKey(int client, CCC_ColorType colorType, char[] key, int size
 				strcopy(key, size, "olive");
 			else if (IsSource2009() && IsValidHex(g_sClientTagColor[client]))
 				strcopy(key, size, g_sClientTagColor[client]);
-			else if (smTrie.GetString(g_sClientTagColor[client], value, sizeof(value)))
+			else if (CGetColor(g_sClientTagColor[client], value, sizeof(value)))
 				strcopy(key, size, g_sClientTagColor[client]);
 			else
 				bFound = false;
@@ -4516,7 +4515,7 @@ stock bool GetColorKey(int client, CCC_ColorType colorType, char[] key, int size
 				strcopy(key, size, "olive");
 			else if (IsSource2009() && IsValidHex(g_sClientNameColor[client]))
 				strcopy(key, size, g_sClientNameColor[client]);
-			else if (smTrie.GetString(g_sClientNameColor[client], value, sizeof(value)))
+			else if (CGetColor(g_sClientNameColor[client], value, sizeof(value)))
 				strcopy(key, size, g_sClientNameColor[client]);
 			else
 				bFound = false;
@@ -4532,7 +4531,7 @@ stock bool GetColorKey(int client, CCC_ColorType colorType, char[] key, int size
 				strcopy(key, size, "olive");
 			else if (IsSource2009() && IsValidHex(g_sClientChatColor[client]))
 				strcopy(key, size, g_sClientChatColor[client]);
-			else if (smTrie.GetString(g_sClientChatColor[client], value, sizeof(value)))
+			else if (CGetColor(g_sClientChatColor[client], value, sizeof(value)))
 				strcopy(key, size, g_sClientChatColor[client]);
 			else
 				bFound = false;
@@ -4574,8 +4573,8 @@ stock bool GetColor(char key[32], char[] value, int size)
 		strcopy(value, size, key);
 		return true;
 	}
-	StringMap smTrie = CGetTrie();
-	smTrie.GetString(key, value, size);
+	
+	CGetColor(key, value, size);
 	return false;
 }
 
@@ -4751,10 +4750,26 @@ public int Native_ResetTag(Handle plugin, int numParams)
 	return 1;
 }
 
-public int Native_UpdateIgnoredArray(Handle plugin, int numParams)
+public int Native_SetIgnored(Handle plugin, int numParams)
 {
-	GetNativeArray(1, g_Ignored, sizeof(g_Ignored));
-
+	int client = GetNativeCell(1);
+	
+	if (!client || client > MaxClients)
+	{
+		ThrowNativeError(SP_ERROR_PARAM, "Invalid client");
+		return 0;
+	}
+	
+	int target = GetNativeCell(2);
+	
+	if (!target || target > MaxClients)
+	{
+		ThrowNativeError(SP_ERROR_PARAM, "Invalid target");
+		return 0;
+	}
+	
+	bool value = view_as<bool>(GetNativeCell(3));
+	g_Ignored[client][target] = value;
 	return 1;
 }
 
